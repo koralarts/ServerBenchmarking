@@ -1,0 +1,16 @@
+=================================
+============= SERVER ============
+=================================
+1. maintain a list of connected clients (host names)
+2. store the amount of requests and data transferred to each client
+3. must be able to handle multiple clients at one time (sending and receiving)
+4. echo server
+
+================================
+============= CLIENT ===========
+================================
+1. maintain a record of a number of requests made by each client
+2. store the amount of data sent to the server
+3. store the time it took for the server to reply with the echo
+4. must be able to send variable-length text strings
+5. user specify how many times to send the strings
