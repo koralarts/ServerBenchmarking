@@ -1,10 +1,9 @@
 /*
- -- SOURCE FILE: client.c
+ -- SOURCE FILE: procthread.c
  --
- -- PROGRAM: client
+ -- PROGRAM: procthread
  --
  -- FUNCTIONS:
- --	void printHelp();
  --
  -- DATE: February 9, 2012
  --
@@ -14,28 +13,27 @@
  --
  -- NOTES:
  -- This program will be used by the server benchmarking program. This will be
- -- a normal client that uses child processes to communicate with the different
- -- servers.
+ -- a normal echo server that uses processes/threads.
  */
+
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <unistd.h>
-#include <regex.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
 
 #include "../defines.h"
 #include "../prototypes.h"
 
+void processClient(int socket, int buflen);
 void printHelp();
 
 /*
  -- FUNCTION: main
  --
- -- DATE: February 9, 2012
+ -- DATE: February 10, 2012
  --
  -- REVISIONS: (Date and Description)
- -- February 9, 2012:
- -- Added generic commandline argument parsing and validation.
  --
  -- DESIGNER: Karl Castillo
  --
@@ -52,33 +50,17 @@ void printHelp();
  -- NOTES:
  --
  */
-int main (int argc, char **argv)
+int main(int argc, char **argv)
 {
-	int iterator;
 	int option = 0;
 	int port = DEF_PORT;
 	int buflen = DEF_BUFFLEN;
-	int times = DEF_TIMES;
-	int socketDescriptor;
-	char *host, *data, *reply;
-	regex_t regex;
+	int socketDescriptor, clientDescriptor, pid;
+	struct sockaddr_in client;
 
-	if(regcomp(&regex, IP_ADDR_FORMAT, 0)) {
-		fprintf(stderr, "Cannot compile regex (%s)\n", IP_ADDR_FORMAT);
-		return EXIT_FAILURE;
-	}
-
-	while((option = getopt(argc, argv, "i:p:l:t:h")) != -1) {
+	while((option = getopt(argc, argv, "p:l:h")) != -1) {
 		switch(option) {
-		case 'i': /* IP Address */
-			if(!regexec(&regex, optarg, 0, NULL, 0)) {
-				fprintf(stderr, "-i: Invalid argument (%s)\n", 
-						optarg);
-				return EXIT_FAILURE;
-			}
-			host = optarg;
-			break;
-		case 'p': /* Port */
+		case 'p':
 			if((port = atoi(optarg)) == 0) {
 				fprintf(stderr, "-p: Invalid argument (%s)\n", 
 						optarg);
@@ -92,14 +74,7 @@ int main (int argc, char **argv)
 				return EXIT_FAILURE;
 			}
 			break;
-		case 't': /* Times */
-			if((times = atoi(optarg)) == 0) {
-				fprintf(stderr, "-t: Invalid argument (%s)\n", 
-						optarg);
-				return EXIT_FAILURE;
-			}
-			break;
-		case 'h': /* Help */
+		case 'h':
 			printHelp();
 			return EXIT_SUCCESS;
 		default:
@@ -108,51 +83,81 @@ int main (int argc, char **argv)
 		}
 	}
 
-	regfree(&regex); /* Free compiled regex */
-
 	if((socketDescriptor = createSocket()) == -1) { /* Create Socket */
 		perror("Cannot Create Socket");
 		return EXIT_FAILURE;
 	}
 
-	printf("Socket Created");
-
-	if(connectToServer(&socketDescriptor, host, port) == -1) { /* Connect to server */
-		perror("Cannot Connect to Server");
+	if(setReuse(&socketDescriptor) == -1) {
+		perror("Cannot set reuse");
 		return EXIT_FAILURE;
 	}
 
-	printf("Connected to Server");
-
-	data = (char*)malloc(sizeof(char) * buflen);
-	reply = (char*)malloc(sizeof(char) * buflen);
-	memset(data, 'a', buflen);
-
-	for(iterator = 0; iterator < times; iterator++) {
-		if(sendData(&socketDescriptor, data, buflen) == -1) {
-			perror("Send Error");
-			return EXIT_FAILURE;
-		}
-		if(readData(&socketDescriptor, reply, buflen) == -1) {
-			perror("Read Error");
-			return EXIT_FAILURE;
-		}
-		puts(reply);
+	if(bindToSocket(&socketDescriptor, port) == -1) {
+		perror("Bind Error");
+		return EXIT_FAILURE;
 	}
 
+	printf("Listening for Clients");
+	if(setListen(&socketDescriptor) == -1) {
+		perror("Listen Error");
+		return EXIT_FAILURE;
+	}
+
+	while(1) {
+		if((clientDescriptor = acceptClient(&socketDescriptor, &client)) == -1) {
+			perror("Cannot Accept Client");
+			return EXIT_FAILURE;
+		}
+
+		printf("Client Address: %s\n", inet_ntoa(client.sin_addr));
+
+		if((pid = fork()) < 0) {
+			perror("Cannot Fork");
+			return EXIT_FAILURE;
+		}
+		if(pid) {
+			processClient(clientDescriptor, buflen);
+			return EXIT_SUCCESS;
+		}
+	}
 	close(socketDescriptor);
+}
 
-	/* Free ALLLLLLLLLL the things */
-	free(data);
-	free(reply);
+/*
+ -- FUNCTION: processClient
+ --
+ -- DATE: February 10, 2012
+ --
+ -- REVISIONS: (Date and Description)
+ --
+ -- DESIGNER: Karl Castillo
+ --
+ -- PROGRAMMER: Karl Castillo
+ --
+ -- INTERFACE: void processClient(int socket, int buflen)
+ --			socket - client socket descriptor
+ --			buflen - the size of the data to read
+ --
+ -- RETURN: void
+ --
+ -- NOTES:
+ --
+ */
+void processClient(int socket, int buflen)
+{
+	char *data = (char*)malloc(sizeof(char) * buflen);
 
-	return EXIT_SUCCESS;
+	while(readData(&socket, data, buflen) != -1) {
+		sendData(&socket, data, buflen);
+	}
+	close(socket);
 }
 
 /*
  -- FUNCTION: printHelp
  --
- -- DATE: February 20, 2012
+ -- DATE: February 10, 2012
  --
  -- REVISIONS: (Date and Description)
  --
@@ -169,9 +174,7 @@ int main (int argc, char **argv)
  */
 void printHelp()
 {
-	printf("-i [IP Address]: set the ip address of the server\n");
 	printf("-p [port]: set the port\n");
 	printf("-l [length]: set the length of the string to be sent\n");
-	printf("-t [times]: set the number of times the string is to be sent\n");
 	printf("-h: show the list of commands\n");
 }
