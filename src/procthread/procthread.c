@@ -98,7 +98,7 @@ int main(int argc, char **argv)
 		return EXIT_FAILURE;
 	}
 
-	printf("Listening for Clients");
+	printf("Listening for Clients\n");
 	if(setListen(&socketDescriptor) == -1) {
 		perror("Listen Error");
 		return EXIT_FAILURE;
@@ -117,7 +117,11 @@ int main(int argc, char **argv)
 			return EXIT_FAILURE;
 		}
 		if(pid) {
-			processClient(clientDescriptor, buflen);
+			if(processClient(clientDescriptor, buflen) == 0) {
+				printf("Client Closed: %s\n", 
+						inet_ntoa(client.sin_addr));
+			}
+			close(clientDescriptor);
 			return EXIT_SUCCESS;
 		}
 	}
@@ -144,14 +148,16 @@ int main(int argc, char **argv)
  -- NOTES:
  --
  */
-void processClient(int socket, int buflen)
+int processClient(int socket, int buflen)
 {
 	char *data = (char*)malloc(sizeof(char) * buflen);
+	int readReturn;
 
-	while(readData(&socket, data, buflen) != -1) {
+	while((readReturn = readData(&socket, data, buflen)) > 1) {
 		sendData(&socket, data, buflen);
 	}
-	close(socket);
+
+	return readReturn;
 }
 
 /*

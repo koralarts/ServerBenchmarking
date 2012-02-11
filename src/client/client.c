@@ -115,17 +115,20 @@ int main (int argc, char **argv)
 		return EXIT_FAILURE;
 	}
 
-	printf("Socket Created");
+	if(setReuse(&socketDescriptor) == -1) { /* Allow reuse address */
+		perror("Cannot set reuse");
+		return EXIT_FAILURE;
+	}
 
 	if(connectToServer(&socketDescriptor, host, port) == -1) { /* Connect to server */
 		perror("Cannot Connect to Server");
 		return EXIT_FAILURE;
 	}
 
-	printf("Connected to Server");
-
 	data = (char*)malloc(sizeof(char) * buflen);
 	reply = (char*)malloc(sizeof(char) * buflen);
+
+	/* Populate buffer for sending */
 	memset(data, 'a', buflen);
 
 	for(iterator = 0; iterator < times; iterator++) {
@@ -140,6 +143,7 @@ int main (int argc, char **argv)
 		puts(reply);
 	}
 
+	/* Close the descriptor */
 	close(socketDescriptor);
 
 	/* Free ALLLLLLLLLL the things */

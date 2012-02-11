@@ -14,13 +14,19 @@ client: client.o socket.o
 	$(CC) $(FLAGS) -o $(REL_DIR)/client $(OBJ_DIR)/client.o $(OBJ_DIR)/socket.o
 
 clientd: client.o socket.o
-	$(CC) $(FLAGS) -g -o $(DEB_DIR)/client client.c $(OBJ_DIR)/client.o $(OBJ_DIR)/socket.o
+	$(CC) $(FLAGS) -g -o $(DEB_DIR)/client $(OBJ_DIR)/client.o $(OBJ_DIR)/socket.o
 
 procthread: procthread.o socket.o
 	$(CC) $(FLAGS) -o $(REL_DIR)/procthread $(OBJ_DIR)/procthread.o $(OBJ_DIR)/socket.o
 
 procthreadd: procThread.o socket.o
 	$(CC) $(FLAGS) -g -o $(REL_DIR)/procthread $(OBJ_DIR)/procthread.o $(OBJ_DIR)/socket.o
+
+select: select.o socket.o
+	$(CC) $(FLAGS) -o $(REL_DIR)/select $(OBJ_DIR)/select.o $(OBJ_DIR)/socket.o
+
+procthreadd: select.o socket.o
+	$(CC) $(FLAGS) -g -o $(REL_DIR)/select $(OBJ_DIR)/select.o $(OBJ_DIR)/socket.o
 
 client.o:
 	$(CC) $(FLAGS) -o $(OBJ_DIR)/client.o -c $(SRC_DIR)/client/client.c
@@ -30,6 +36,9 @@ socket.o:
 
 procthread.o:
 	$(CC) $(FLAGS) -o $(OBJ_DIR)/procthread.o -c $(SRC_DIR)/procthread/procthread.c
+
+select.o:
+	$(CC) $(FLAGS) -o $(OBJ_DIR)/select.o -c $(SRC_DIR)/select/select.c
 
 clean:
 	rm -f $(REL_DIR)/* && rm -f $(OBJ_DIR)/* && rm -f $(DEB_DIR)/*

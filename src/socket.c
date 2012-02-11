@@ -81,8 +81,8 @@ int createSocket()
 int setReuse(int *socket)
 {
     socklen_t optlen = 1;
-    return setsockopt(*socket, SOL_SOCKET, SO_REUSEADDR, &optlen,
-                        sizeof(optlen));
+    return setsockopt(*socket, SOL_SOCKET, SO_REUSEADDR, &optlen, 
+				sizeof(optlen));
 }
 
 /*
@@ -279,10 +279,10 @@ int readData(int *socket, char *data, const int buflen)
 		bp += n;
 		btr -= n;
 
-		if(n == -1) {
-			return -1;
+		if(n < 1) {
+			break;
 		}
 	}
 
-	return 0;
+	return n;
 }
