@@ -152,6 +152,9 @@ int main(int argc, char **argv)
 			}
 		}
 	}
+
+	close(socketDescriptor);
+	
 	return EXIT_SUCCESS;
 }
 
@@ -196,9 +199,8 @@ int processClient(int socket, int buflen)
 	char *data = (char*)malloc(sizeof(char) * buflen);
 	int readReturn;
 
-	while((readReturn = readData(&socket, data, buflen)) > 1) {
-		sendData(&socket, data, buflen);
-	}
+	readReturn = readData(&socket, data, buflen);
+	sendData(&socket, data, buflen);
 
 	return readReturn;
 }

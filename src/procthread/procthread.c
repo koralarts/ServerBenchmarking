@@ -25,7 +25,7 @@
 #include "../defines.h"
 #include "../prototypes.h"
 
-void processClient(int socket, int buflen);
+int processClient(int socket, int buflen);
 void printHelp();
 
 /*
@@ -116,7 +116,7 @@ int main(int argc, char **argv)
 			perror("Cannot Fork");
 			return EXIT_FAILURE;
 		}
-		if(pid) {
+		if(pid == 0) { /* child */
 			if(processClient(clientDescriptor, buflen) == 0) {
 				printf("Client Closed: %s\n", 
 						inet_ntoa(client.sin_addr));
@@ -126,6 +126,8 @@ int main(int argc, char **argv)
 		}
 	}
 	close(socketDescriptor);
+
+	return EXIT_SUCCESS;
 }
 
 /*
@@ -153,7 +155,7 @@ int processClient(int socket, int buflen)
 	char *data = (char*)malloc(sizeof(char) * buflen);
 	int readReturn;
 
-	while((readReturn = readData(&socket, data, buflen)) > 1) {
+	while((readReturn = readData(&socket, data, buflen)) > 0) {
 		sendData(&socket, data, buflen);
 	}
 
