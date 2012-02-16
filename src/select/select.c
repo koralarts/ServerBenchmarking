@@ -152,6 +152,9 @@ int main(int argc, char **argv)
 			}
 		}
 	}
+
+	close(socketDescriptor);
+	
 	return EXIT_SUCCESS;
 }
 
@@ -191,6 +194,28 @@ void addClient(int *socket, int *client, fd_set *allset, int *maxi, int *maxfd,
 	}
 }
 
+/*
+ -- FUNCTION: processClient
+ --
+ -- DATE: February 11, 2012
+ --
+ -- REVISIONS: (Date and Description)
+ -- February 13, 2012
+ -- Removed the while look from the read.
+ --
+ -- DESIGNER: Karl Castillo
+ --
+ -- PROGRAMMER: Karl Castillo
+ --
+ -- INTERFACE: void processClient(int socket, int buflen)
+ --			socket - client socket descriptor
+ --			buflen - the size of the data to read
+ --
+ -- RETURN: void
+ --
+ -- NOTES:
+ --
+ */
 int processClient(int socket, int buflen)
 {
 	char *data = (char*)malloc(sizeof(char) * buflen);
