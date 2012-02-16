@@ -24,7 +24,7 @@
 #include <regex.h>
 
 #include "../defines.h"
-#include "../prototypes.h"
+#include "../socketPrototypes.h"
 
 void printHelp();
 
@@ -111,17 +111,17 @@ int main (int argc, char **argv)
 	regfree(&regex); /* Free compiled regex */
 
 	if((socketDescriptor = createSocket()) == -1) { /* Create Socket */
-		perror("Cannot Create Socket");
+		perror("createSocket():");
 		return EXIT_FAILURE;
 	}
 
 	if(setReuse(&socketDescriptor) == -1) { /* Allow reuse address */
-		perror("Cannot set reuse");
+		perror("setReuse():");
 		return EXIT_FAILURE;
 	}
 
 	if(connectToServer(&socketDescriptor, host, port) == -1) { /* Connect to server */
-		perror("Cannot Connect to Server");
+		perror("connectToServer():");
 		return EXIT_FAILURE;
 	}
 
@@ -133,11 +133,11 @@ int main (int argc, char **argv)
 
 	for(iterator = 0; iterator < times; iterator++) {
 		if(sendData(&socketDescriptor, data, buflen) == -1) {
-			perror("Send Error");
+			perror("sendData():");
 			return EXIT_FAILURE;
 		}
 		if(readData(&socketDescriptor, reply, buflen) == -1) {
-			perror("Read Error");
+			perror("readData():");
 			return EXIT_FAILURE;
 		}
 		puts(reply);

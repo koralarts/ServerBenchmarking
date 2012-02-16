@@ -23,7 +23,7 @@
 #include <sys/socket.h>
 
 #include "../defines.h"
-#include "../prototypes.h"
+#include "../socketPrototypes.h"
 
 void printHelp();
 void clearSet(int *client, fd_set *allset, int socket);
@@ -196,9 +196,10 @@ int processClient(int socket, int buflen)
 	char *data = (char*)malloc(sizeof(char) * buflen);
 	int readReturn;
 
-	while((readReturn = readData(&socket, data, buflen)) > 1) {
-		sendData(&socket, data, buflen);
-	}
+	if((readReturn = readData(&socket, data, buflen)) < 0) {
+		perror("readData():");
+	}	
+	sendData(&socket, data, buflen);
 
 	return readReturn;
 }

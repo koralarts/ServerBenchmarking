@@ -32,6 +32,7 @@
 #include <netdb.h>
 #include <errno.h>
 #include <arpa/inet.h>
+#include <fcntl.h>
 
 /*
  -- FUNCTION: main
@@ -80,9 +81,34 @@ int createSocket()
  */
 int setReuse(int *socket)
 {
-    socklen_t optlen = 1;
-    return setsockopt(*socket, SOL_SOCKET, SO_REUSEADDR, &optlen, 
+   	socklen_t optlen = 1;
+    	return setsockopt(*socket, SOL_SOCKET, SO_REUSEADDR, &optlen, 
 				sizeof(optlen));
+}
+
+/*
+ -- FUNCTION: setNonBlocking
+ --
+ -- DATE: February 16, 2012
+ --
+ -- REVISIONS: (Date and Description)
+ --
+ -- DESIGNER: Karl Castillo
+ --
+ -- PROGRAMMER: Karl Castillo
+ --
+ -- INTERFACE: int setReuse(int *socket)
+ --			socket - socket descriptor
+ --
+ -- RETURN: int
+ --		-1 on failure
+ --
+ -- NOTES:
+ --
+ */
+int setNonBlocking(int *socket)
+{
+	return fcntl(*socket, F_SETFL, O_NONBLOCK | fcntl(*socket, F_GETFL, 0));
 }
 
 /*

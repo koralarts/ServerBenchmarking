@@ -23,9 +23,9 @@
 #include <sys/socket.h>
 
 #include "../defines.h"
-#include "../prototypes.h"
+#include "../socketPrototypes.h"
 
-void processClient(int socket, int buflen);
+int processClient(int socket, int buflen);
 void printHelp();
 
 /*
