@@ -18,9 +18,11 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
+#include <signal.h>
 
 #include "../defines.h"
 #include "../socketPrototypes.h"
@@ -36,8 +38,14 @@ void stats(int *p);
 void printHelp();
 void clearSet(int *client, fd_set *allset, int socket);
 void addClient(int *socket, int *client, fd_set *allset, int *maxi, int *maxfd,
-			struct sockaddr_in *clientSock, int *p);
-int processClient(int socket, int buflen, int *p, char *ip);
+			struct sockaddr_in *clientSock);
+int processClient(int socket, int buflen);
+void saveStats(int);
+
+/****************************** SUPER GLOBALS ********************************/
+int recvData = 0;
+int numReq = 0;
+int p[2];
 
 /*
  -- FUNCTION: main
@@ -63,15 +71,25 @@ int processClient(int socket, int buflen, int *p, char *ip);
  */
 int main(int argc, char **argv)
 {
-	int option, pid;
-	int p[2];
+	int option, pid, readReturn;
 	int port = DEF_PORT;
 	int buflen = DEF_BUFFLEN;
 	int socketDescriptor, maxFileDescriptor, maxIndex, client[FD_SETSIZE];
 	int iterator, indexReady, clientSocketDescriptor;
 	fd_set rset, allset;
 	struct sockaddr_in clientSock;
+	struct sigaction act;
 
+	/* Setup signal catcher */
+	act.sa_handler = saveStats;
+	act.sa_flags = 0;
+
+	if((sigemptyset(&act.sa_mask) == -1 || sigaction(SIGINT, &act, NULL) == -1)) {
+		perror("Failed to SIGINT handler");
+		return EXIT_FAILURE;
+	}
+
+	/* Setup Pipes */
 	if(pipe(p) < 0) {
 		perror("fork():");
 		return EXIT_FAILURE;
@@ -151,7 +169,7 @@ int main(int argc, char **argv)
 		{
 			addClient(&socketDescriptor, client, &allset,
 					&maxIndex, &maxFileDescriptor,
-					&clientSock, p);
+					&clientSock);
 
 			if(--indexReady <= 0) {
 				continue;
@@ -164,8 +182,8 @@ int main(int argc, char **argv)
 			}
 			
 			if(FD_ISSET(clientSocketDescriptor, &rset)) {
-				if(processClient(clientSocketDescriptor, buflen,
-					p, inet_ntoa(clientSock.sin_addr)) == 0) 
+				if((readReturn = processClient(
+					clientSocketDescriptor, buflen)) == 0) 
 				{
 					printf("Client Closed: %s\n", 
 						inet_ntoa(clientSock.sin_addr));
@@ -173,6 +191,8 @@ int main(int argc, char **argv)
 					FD_CLR(clientSocketDescriptor, &allset);
                				client[iterator] = -1;
 				}
+				numReq++;
+				recvData += readReturn;
 			}
 
 			if(--indexReady <= 0) {
@@ -187,7 +207,7 @@ int main(int argc, char **argv)
 }
 
 void addClient(int *socket, int *client, fd_set *allset, int *maxi, int *maxfd,
-			struct sockaddr_in *clientSock, int *p)
+			struct sockaddr_in *clientSock)
 {
 	PPMESG mesg = (PPMESG)malloc(sizeof(PMESG));
 
@@ -252,35 +272,15 @@ void addClient(int *socket, int *client, fd_set *allset, int *maxi, int *maxfd,
  -- NOTES:
  --
  */
-int processClient(int socket, int buflen, int *write, char *ip)
-{
-	PPMESG mesg = (PPMESG)malloc(sizeof(PMESG));
-	
+int processClient(int socket, int buflen)
+{	
 	char *data = (char*)malloc(sizeof(char) * buflen);
 	int readReturn;
-	int recvData = 0;
-	int numReq = 0;
 
 	if((readReturn = readData(&socket, data, buflen)) < 0) {
 		perror("readData():");
 	}
-	recvData += readReturn;
-	numReq++;
 	sendData(&socket, data, buflen);
-
-	if(readReturn == 0) {
-		sprintf(mesg->mesg_data, "%s: %d", ip, numReq);
-		mesg->mesg_len = sizeof(mesg->mesg_data)/sizeof(char);
-		mesg->mesg_type = NUM_REQUESTS;
-
-		mesgSend(write[1], mesg);
-
-		sprintf(mesg->mesg_data, "%s: %d", ip, recvData);
-		mesg->mesg_len = sizeof(mesg->mesg_data)/sizeof(char);
-		mesg->mesg_type = NUM_DATA_RECV;
-
-		mesgSend(write[1], mesg);
-	}
 
 	return readReturn;
 }
@@ -315,6 +315,25 @@ void clearSet(int *client, fd_set *allset, int socket)
 
 	FD_ZERO(allset);
 	FD_SET(socket, allset);
+}
+
+void saveStats(int sig)
+{
+	PPMESG mesg = (PPMESG)malloc(sizeof(PMESG));	
+
+	sprintf(mesg->mesg_data, "%d", numReq);	
+	mesg->mesg_len = sizeof(mesg->mesg_data)/sizeof(char);
+	mesg->mesg_type = NUM_REQUESTS;
+
+	mesgSend(p[1], mesg);
+
+	sprintf(mesg->mesg_data, "%d", recvData);
+	mesg->mesg_len = sizeof(mesg->mesg_data)/sizeof(char);
+	mesg->mesg_type = NUM_DATA_RECV;
+
+	mesgSend(p[1], mesg);
+
+	free(mesg);
 }
 
 void stats(int *p)

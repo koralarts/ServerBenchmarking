@@ -10,6 +10,7 @@
 #include "../defines.h"
 #include "../socketPrototypes.h"
 #include "../epollPrototypes.h"
+#include "../mesg.h"
 
 int processClient(int socket, int buflen);
 void printHelp();
