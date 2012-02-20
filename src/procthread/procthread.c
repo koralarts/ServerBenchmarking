@@ -24,8 +24,16 @@
 
 #include "../defines.h"
 #include "../socketPrototypes.h"
+#include "../mesg.h"
 
-int processClient(int socket, int buflen);
+/********************* DEFINITIONS *********************/
+#define	CLIENTS		0
+#define NUM_DATA_RECV	1
+#define NUM_REQUESTS	2
+
+/********************* PROTOTYPES **********************/
+int processClient(int socket, int buflen, int *write, char *ip);
+void stats(int *p);
 void printHelp();
 
 /*
@@ -52,11 +60,30 @@ void printHelp();
  */
 int main(int argc, char **argv)
 {
+	PPMESG mesg = (PPMESG)malloc(sizeof(PMESG));
 	int option = 0;
 	int port = DEF_PORT;
 	int buflen = DEF_BUFFLEN;
 	int socketDescriptor, clientDescriptor, pid;
+	int p[2];
 	struct sockaddr_in client;
+
+	if(pipe(p) < 0) { /* create pipe */
+		perror("pipe():");
+		return EXIT_FAILURE;
+	}
+
+	if((pid = fork()) < 0) { /* error */
+		perror("fork():");
+		return EXIT_FAILURE;
+	}
+
+	if(pid == 0) { /* child */
+		stats(p);
+		return EXIT_SUCCESS;
+	}
+
+	close(p[0]); /* close read */
 
 	while((option = getopt(argc, argv, "p:l:h")) != -1) {
 		switch(option) {
@@ -112,12 +139,19 @@ int main(int argc, char **argv)
 
 		printf("Client Address: %s\n", inet_ntoa(client.sin_addr));
 
+		sprintf(mesg->mesg_data, "%s", inet_ntoa(client.sin_addr));
+		mesg->mesg_len = sizeof(mesg->mesg_data)/sizeof(char);
+		mesg->mesg_type = CLIENTS;
+
+		mesgSend(p[1], mesg);
+
 		if((pid = fork()) < 0) {
 			perror("Cannot Fork");
 			return EXIT_FAILURE;
 		}
 		if(pid == 0) { /* child */
-			if(processClient(clientDescriptor, buflen) == 0) {
+			if(processClient(clientDescriptor, buflen, p, 
+					inet_ntoa(client.sin_addr)) == 0) {
 				printf("Client Closed: %s\n", 
 						inet_ntoa(client.sin_addr));
 			}
@@ -126,6 +160,7 @@ int main(int argc, char **argv)
 		}
 	}
 	close(socketDescriptor);
+	free(mesg);
 
 	return EXIT_SUCCESS;
 }
@@ -150,16 +185,80 @@ int main(int argc, char **argv)
  -- NOTES:
  --
  */
-int processClient(int socket, int buflen)
+int processClient(int socket, int buflen, int *write, char *ip)
 {
+	PPMESG mesg = (PPMESG)malloc(sizeof(PMESG));
 	char *data = (char*)malloc(sizeof(char) * buflen);
 	int readReturn;
+	int recvData = 0;
+	int numReq = 0;
 
 	while((readReturn = readData(&socket, data, buflen)) > 0) {
+		recvData += readReturn;
+		numReq++;
 		sendData(&socket, data, buflen);
 	}
 
+	sprintf(mesg->mesg_data, "%s: %d", ip, numReq);
+	mesg->mesg_len = sizeof(mesg->mesg_data)/sizeof(char);
+	mesg->mesg_type = NUM_REQUESTS;
+
+	mesgSend(write[1], mesg);
+
+	sprintf(mesg->mesg_data, "%s: %d", ip, recvData);
+	mesg->mesg_len = sizeof(mesg->mesg_data)/sizeof(char);
+	mesg->mesg_type = NUM_DATA_RECV;
+
+	mesgSend(write[1], mesg);
+
+	free(data);
+	free(mesg);
+
 	return readReturn;
+}
+
+void stats(int *p)
+{
+	PPMESG mesg = (PPMESG)malloc(sizeof(PMESG));
+	FILE *clients, *req, *data;
+
+	close(p[1]); /* close write */
+	while(1) {
+		switch(mesgRecv(p[0], mesg)) {
+		case 0:
+		case -1:
+			sleep(1);
+			break;
+		default:
+			switch(mesg->mesg_type) {
+			case CLIENTS:
+				if((clients = fopen("clients.txt", "a")) == NULL) {
+					fprintf(stderr, "fopen(clients.txt)");
+					exit(EXIT_FAILURE);
+				}
+				fprintf(clients, "%s\n", mesg->mesg_data);
+				fclose(clients);
+				break;
+			case NUM_REQUESTS:
+				if((req = fopen("reqserv.txt", "a")) == NULL) {
+					fprintf(stderr, "fopen(reqsrv.txt)");
+					exit(EXIT_FAILURE);
+				}
+				fprintf(req, "%s\n", mesg->mesg_data);
+				fclose(req);
+				break;
+			case NUM_DATA_RECV:
+				if((data = fopen("dataserv.txt", "a")) == NULL) {
+					fprintf(stderr, "fopen(dataserv.txt)");
+					exit(EXIT_FAILURE);
+				}
+				fprintf(data, "%s\n", mesg->mesg_data);
+				fclose(data);
+				break;
+			}
+		}
+	}
+	free(mesg);
 }
 
 /*

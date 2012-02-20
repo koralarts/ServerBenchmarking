@@ -12,20 +12,20 @@ OBJ_DIR=object
 
 release: client procthread select epoll
 
-client: client.o socket.o
-	$(CC) $(FLAGS) -o $(REL_DIR)/client $(OBJ_DIR)/client.o $(OBJ_DIR)/socket.o
+client: client.o mesg.o socket.o
+	$(CC) $(FLAGS) -o $(REL_DIR)/client $(OBJ_DIR)/mesg.o $(OBJ_DIR)/client.o $(OBJ_DIR)/socket.o
 
 clientd: client.o socket.o
 	$(CC) $(FLAGS) -g -o $(DEB_DIR)/client $(OBJ_DIR)/client.o $(OBJ_DIR)/socket.o
 
-procthread: procthread.o socket.o
-	$(CC) $(FLAGS) -o $(REL_DIR)/procthread $(OBJ_DIR)/procthread.o $(OBJ_DIR)/socket.o
+procthread: procthread.o mesg.o socket.o
+	$(CC) $(FLAGS) -o $(REL_DIR)/procthread $(OBJ_DIR)/procthread.o $(OBJ_DIR)/mesg.o $(OBJ_DIR)/socket.o
 
 procthreadd: procThread.o socket.o
 	$(CC) $(FLAGS) -g -o $(REL_DIR)/procthread $(OBJ_DIR)/procthread.o $(OBJ_DIR)/socket.o
 
-select: select.o socket.o
-	$(CC) $(FLAGS) -o $(REL_DIR)/select $(OBJ_DIR)/select.o $(OBJ_DIR)/socket.o
+select: select.o mesg.o socket.o
+	$(CC) $(FLAGS) -o $(REL_DIR)/select $(OBJ_DIR)/select.o $(OBJ_DIR)/mesg.o $(OBJ_DIR)/socket.o
 
 selectd: select.o socket.o
 	$(CC) $(FLAGS) -g -o $(REL_DIR)/select $(OBJ_DIR)/select.o $(OBJ_DIR)/socket.o
@@ -53,6 +53,9 @@ select.o:
 
 epollWrap.o:
 	$(CC) $(FLAGS) -o $(OBJ_DIR)/epollWrap.o -O -c $(SRC_DIR)/epollWrap.c
+
+mesg.o:
+	$(CC) $(FLAGS) -o $(OBJ_DIR)/mesg.o -O -c $(SRC_DIR)/mesg.c
 
 clean:
 	rm -f $(REL_DIR)/* && rm -f $(OBJ_DIR)/* && rm -f $(DEB_DIR)/*
