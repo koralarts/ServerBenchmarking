@@ -319,7 +319,7 @@ void clearSet(int *client, fd_set *allset, int socket)
 
 void saveStats(int sig)
 {
-	PPMESG mesg = (PPMESG)malloc(sizeof(PMESG));	
+	PPMESG mesg = (PPMESG)malloc(sizeof(PMESG));
 
 	sprintf(mesg->mesg_data, "%d", numReq);	
 	mesg->mesg_len = sizeof(mesg->mesg_data)/sizeof(char);
@@ -373,7 +373,7 @@ void stats(int *p)
 				}
 				fprintf(data, "%s\n", mesg->mesg_data);
 				fclose(data);
-				break;
+				exit(EXIT_SUCCESS);
 			}
 		}
 	}

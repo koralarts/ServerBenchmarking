@@ -6,25 +6,68 @@
 #include <sys/socket.h>
 #include <errno.h>
 #include <assert.h>
+#include <signal.h>
 
 #include "../defines.h"
 #include "../socketPrototypes.h"
 #include "../epollPrototypes.h"
 #include "../mesg.h"
 
+/********************* DEFINITIONS *********************/
+#define	CLIENTS		0
+#define NUM_DATA_RECV	1
+#define NUM_REQUESTS	2
+
+/********************* PROTOTYPES *********************/
 int processClient(int socket, int buflen);
 void printHelp();
+void stats(int *p);
+void saveStats(int sig);
+
+/********************* GLOBALS ************************/
+int recvData = 0;
+int numReq = 0;
+int p[2];
 
 int main(int argc, char **argv)
 {
 	static struct epoll_event epollEvents[EPOLL_QUEUE_LEN], epollEvent;
-
-	int option, iterator;
+	
+	PPMESG mesg = (PPMESG)malloc(sizeof(PMESG));
+	int option, pid, iterator;
 	int port = DEF_PORT;
 	int buflen = DEF_BUFFLEN;
 	int socketDescriptor, epollFileDescriptor, numFileDescriptors;
 	int clientSocketDescriptor;
 	struct sockaddr_in client;
+	struct sigaction act;
+
+	/* Setup signal catcher */
+	act.sa_handler = saveStats;
+	act.sa_flags = 0;
+
+	if((sigemptyset(&act.sa_mask) == -1 || sigaction(SIGINT, &act, NULL) == -1)) {
+		perror("Failed to SIGINT handler");
+		return EXIT_FAILURE;
+	}
+
+	/* Setup Pipes */
+	if(pipe(p) < 0) {
+		perror("fork():");
+		return EXIT_FAILURE;
+	}
+
+	if((pid = fork()) < 0) { /* error */
+		perror("fork():");
+		return EXIT_FAILURE;
+	}
+
+	if(pid == 0) { /* child */
+		stats(p);
+		return EXIT_SUCCESS;
+	}
+
+	close(p[0]); /* close read */
 
 	while((option = getopt(argc, argv, "p:l:h")) != -1) {
 		switch(option) {
@@ -136,6 +179,13 @@ int main(int argc, char **argv)
 
 				printf("Client Connected: %s\n",
 					inet_ntoa(client.sin_addr));
+
+				sprintf(mesg->mesg_data, "%s", 
+					inet_ntoa(client.sin_addr));
+				mesg->mesg_len = sizeof(mesg->mesg_data)/sizeof(char);
+				mesg->mesg_type = CLIENTS;
+
+				mesgSend(p[1], mesg);
 				continue;
 			}
 			
@@ -157,10 +207,79 @@ int processClient(int socket, int buflen)
 
 	if((readReturn = readData(&socket, data, buflen)) < 0) {
 		perror("readData():");
-	}	
+	}
+	
+	if(readReturn != -1 && readReturn != 0) {
+		recvData += readReturn;
+		numReq++;
+	}
+
 	sendData(&socket, data, buflen);
 
 	return readReturn;
+}
+
+void saveStats(int sig)
+{
+	PPMESG mesg = (PPMESG)malloc(sizeof(PMESG));
+
+	sprintf(mesg->mesg_data, "%d", numReq);	
+	mesg->mesg_len = sizeof(mesg->mesg_data)/sizeof(char);
+	mesg->mesg_type = NUM_REQUESTS;
+
+	mesgSend(p[1], mesg);
+
+	sprintf(mesg->mesg_data, "%d", recvData);
+	mesg->mesg_len = sizeof(mesg->mesg_data)/sizeof(char);
+	mesg->mesg_type = NUM_DATA_RECV;
+
+	mesgSend(p[1], mesg);
+
+	free(mesg);
+}
+
+void stats(int *p)
+{
+	PPMESG mesg = (PPMESG)malloc(sizeof(PMESG));
+	FILE *clients, *req, *data;
+
+	close(p[1]); /* close write */
+	while(1) {
+		switch(mesgRecv(p[0], mesg)) {
+		case 0:
+		case -1:
+			sleep(1);
+			break;
+		default:
+			switch(mesg->mesg_type) {
+			case CLIENTS:
+				if((clients = fopen("clients.txt", "a")) == NULL) {
+					fprintf(stderr, "fopen(clients.txt)");
+					exit(EXIT_FAILURE);
+				}
+				fprintf(clients, "%s\n", mesg->mesg_data);
+				fclose(clients);
+				break;
+			case NUM_REQUESTS:
+				if((req = fopen("reqserv.txt", "a")) == NULL) {
+					fprintf(stderr, "fopen(reqsrv.txt)");
+					exit(EXIT_FAILURE);
+				}
+				fprintf(req, "%s\n", mesg->mesg_data);
+				fclose(req);
+				break;
+			case NUM_DATA_RECV:
+				if((data = fopen("dataserv.txt", "a")) == NULL) {
+					fprintf(stderr, "fopen(dataserv.txt)");
+					exit(EXIT_FAILURE);
+				}
+				fprintf(data, "%s\n", mesg->mesg_data);
+				fclose(data);
+				exit(EXIT_SUCCESS);
+			}
+		}
+	}
+	free(mesg);
 }
 
 /*

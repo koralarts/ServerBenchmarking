@@ -30,8 +30,8 @@ select: select.o mesg.o socket.o
 selectd: select.o socket.o
 	$(CC) $(FLAGS) -g -o $(REL_DIR)/select $(OBJ_DIR)/select.o $(OBJ_DIR)/socket.o
 
-epoll:	epoll.o epollWrap.o socket.o
-	$(CC) $(FLAGS) -o $(REL_DIR)/epoll $(OBJ_DIR)/epoll.o $(OBJ_DIR)/epollWrap.o $(OBJ_DIR)/socket.o
+epoll:	epoll.o epollWrap.o mesg.o socket.o
+	$(CC) $(FLAGS) -o $(REL_DIR)/epoll $(OBJ_DIR)/epoll.o $(OBJ_DIR)/epollWrap.o $(OBJ_DIR)/mesg.o $(OBJ_DIR)/socket.o
 
 epolld: epoll.o epollWrap.o socket.o
 	$(CC) $(FLAGS) -g -o $(REL_DIR)/epoll $(OBJ_DIR)/epoll.o $(OBJ_DIR)/epollWrap.o $(OBJ_DIR)/socket.o
