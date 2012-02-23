@@ -4,7 +4,9 @@
  -- PROGRAM: client
  --
  -- FUNCTIONS:
+ --	void stats(int *read);
  --	void printHelp();
+ --	long delay (struct timeval t1, struct timeval t2);
  --
  -- DATE: February 9, 2012
  --
@@ -81,12 +83,12 @@ int main (int argc, char **argv)
 	char *data, *reply;
 	regex_t regex;
 
-	if(pipe(p) < 0) {
+	if(pipe(p) < 0) { /* Create pipe */
 		perror("pipe():");
 		return EXIT_FAILURE;
 	}
 
-	if((pid = fork()) < 0) {
+	if((pid = fork()) < 0) { /* Fork for the worker process */
 		perror("fork():");
 		return EXIT_FAILURE;
 	}
@@ -98,7 +100,7 @@ int main (int argc, char **argv)
 
 	close(p[0]); /* Close Read */
 
-	if(regcomp(&regex, IP_ADDR_FORMAT, 0)) {
+	if(regcomp(&regex, IP_ADDR_FORMAT, 0)) { /* Compile a regular exp */
 		fprintf(stderr, "Cannot compile regex (%s)\n", IP_ADDR_FORMAT);
 		return EXIT_FAILURE;
 	}
@@ -145,7 +147,7 @@ int main (int argc, char **argv)
 
 	regfree(&regex); /* Free compiled regex */
 
-	if(host == 0) {
+	if(host == 0) { /* Check if user entered an IP address */
 		fprintf(stderr, "No host entered");
 		return EXIT_FAILURE;
 	}
@@ -173,18 +175,21 @@ int main (int argc, char **argv)
 
 	mesg = (PPMESG)malloc(sizeof(PMESG));
 
-	for(iterator = 0; iterator < times; iterator++) {
+	for(iterator = 0; iterator < times; iterator++) { /* Send data n times */
 		if((data_sent += sendData(&socketDescriptor, data, buflen)) == -1) {
 			perror("sendData():");
 			return EXIT_FAILURE;
 		}
-		gettimeofday(&start, NULL);
+
+		gettimeofday(&start, NULL); /* Start Timer */
 		num_requests++;
+
 		if(readData(&socketDescriptor, reply, buflen) == -1) {
 			perror("readData():");
 			return EXIT_FAILURE;
 		}
-		gettimeofday(&end, NULL);
+
+		gettimeofday(&end, NULL); /* End Timer */
 
 		sprintf(mesg->mesg_data, "%d", delay(start, end));
 		mesg->mesg_len = sizeof(mesg->mesg_data)/sizeof(char);
@@ -196,6 +201,7 @@ int main (int argc, char **argv)
 		fflush(stdout);
 	}
 
+	/* Send stats to server thread */
 	sprintf(mesg->mesg_data, "%d", data_sent);
 	mesg->mesg_len = sizeof(mesg->mesg_data)/sizeof(char);
 	mesg->mesg_type = NUM_DATA_SENT;
@@ -211,7 +217,7 @@ int main (int argc, char **argv)
 	/* Close the descriptor */
 	close(socketDescriptor);
 
-	/* Free ALLLLLLLLLL the things */
+	/* Free ALL the things */
 	free(data);
 	free(reply);
 	free(mesg);
@@ -219,6 +225,25 @@ int main (int argc, char **argv)
 	return EXIT_SUCCESS;
 }
 
+/*
+ -- FUNCTION: stats
+ --
+ -- DATE: February 23, 2012
+ --
+ -- REVISIONS: (Date and Description)
+ --
+ -- DESIGNER: Karl Castillo
+ --
+ -- PROGRAMMER: Karl Castillo
+ --
+ -- INTERFACE: void stats(int *p) 
+ --				p - array of read/write pipe
+ --
+ -- RETURN: void
+ --
+ -- NOTES:
+ --
+ */
 void stats(int *p) 
 {
 	PPMESG mesg = (PPMESG)malloc(sizeof(PMESG));
@@ -227,7 +252,7 @@ void stats(int *p)
 	close(p[1]); /* Close Write */
 	while(1) {
 		switch(mesgRecv(p[0], mesg)) {
-		case -1:
+		case -1: /* nothing to read */
 		case 0:
 			sleep(1);
 			break;
@@ -257,7 +282,7 @@ void stats(int *p)
 				fprintf(rtt, "%d: %s\n", getpid(), mesg->mesg_data);
 				fclose(rtt);
 				break;
-			default:
+			default: /* invalid type */
 				fprintf(stderr, "Invalid Data Type");
 				break;
 			}

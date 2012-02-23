@@ -1,3 +1,25 @@
+/*
+ -- SOURCE FILE: epoll.c
+ --
+ -- PROGRAM: epoll
+ --
+ -- FUNCTIONS:
+ --	int processClient(int socket, int buflen);
+ --	void printHelp();
+ --	void stats(int *p);
+ --	void saveStats(int sig);
+ --
+ -- DATE: February 9, 2012
+ --
+ -- DESIGNER: Karl Castillo
+ --
+ -- PROGRAMMER: Karl Castillo
+ --
+ -- NOTES:
+ -- This program will be used by the server benchmarking program. This will be
+ -- a normal echo server that uses ePoll.
+ */
+/********************** HEADERS ************************/
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -8,6 +30,7 @@
 #include <assert.h>
 #include <signal.h>
 
+/******************* USER HEADERS **********************/
 #include "../defines.h"
 #include "../socketPrototypes.h"
 #include "../epollPrototypes.h"
@@ -29,6 +52,28 @@ int recvData = 0;
 int numReq = 0;
 int p[2];
 
+/*
+ -- FUNCTION: main
+ --
+ -- DATE: February 23, 2012
+ --
+ -- REVISIONS: (Date and Description)
+ --
+ -- DESIGNER: Karl Castillo
+ --
+ -- PROGRAMMER: Karl Castillo
+ --
+ -- INTERFACE: int main(int argc, char* argv[])
+ --				argc - number of arguments
+ --				argv - arguments including program name
+ --
+ -- RETURN: int
+ -- 		EXIT_SUCCESS - success
+ --		EXIT_FAILURE - failure
+ --
+ -- NOTES:
+ --
+ */
 int main(int argc, char **argv)
 {
 	static struct epoll_event epollEvents[EPOLL_QUEUE_LEN], epollEvent;
@@ -200,6 +245,26 @@ int main(int argc, char **argv)
 	return EXIT_SUCCESS;	
 }
 
+/*
+ -- FUNCTION: processClient
+ --
+ -- DATE: February 10, 2012
+ --
+ -- REVISIONS: (Date and Description)
+ --
+ -- DESIGNER: Karl Castillo
+ --
+ -- PROGRAMMER: Karl Castillo
+ --
+ -- INTERFACE: void processClient(int socket, int buflen)
+ --			socket - client socket descriptor
+ --			buflen - the size of the data to read
+ --
+ -- RETURN: void
+ --
+ -- NOTES:
+ --
+ */
 int processClient(int socket, int buflen)
 {
 	char *data = (char*)malloc(sizeof(char) * buflen);
@@ -219,6 +284,26 @@ int processClient(int socket, int buflen)
 	return readReturn;
 }
 
+/*
+ -- FUNCTION: saveStats
+ --
+ -- DATE: February 23, 2012
+ --
+ -- REVISIONS: (Date and Description)
+ --
+ -- DESIGNER: Karl Castillo
+ --
+ -- PROGRAMMER: Karl Castillo
+ --
+ -- INTERFACE: void saveStats(int sig)
+ --			sig - the signal caught
+ --
+ -- RETURN: void
+ --
+ -- NOTES:
+ -- Function associated with the SIGINT capture. Used to save data after the
+ -- CTRL+C.
+ */
 void saveStats(int sig)
 {
 	PPMESG mesg = (PPMESG)malloc(sizeof(PMESG));
@@ -238,6 +323,25 @@ void saveStats(int sig)
 	free(mesg);
 }
 
+/*
+ -- FUNCTION: stats
+ --
+ -- DATE: February 23, 2012
+ --
+ -- REVISIONS: (Date and Description)
+ --
+ -- DESIGNER: Karl Castillo
+ --
+ -- PROGRAMMER: Karl Castillo
+ --
+ -- INTERFACE: void stats(int *p) 
+ --				p - array of read/write pipe
+ --
+ -- RETURN: void
+ --
+ -- NOTES:
+ -- Used by the worker process to save data into files.
+ */
 void stats(int *p)
 {
 	PPMESG mesg = (PPMESG)malloc(sizeof(PMESG));

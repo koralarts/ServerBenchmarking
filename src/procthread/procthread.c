@@ -4,6 +4,9 @@
  -- PROGRAM: procthread
  --
  -- FUNCTIONS:
+ --	int processClient(int socket, int buflen, int *write);
+ --	void stats(int *p);
+ --	void printHelp();
  --
  -- DATE: February 9, 2012
  --
@@ -15,13 +18,14 @@
  -- This program will be used by the server benchmarking program. This will be
  -- a normal echo server that uses processes/threads.
  */
-
+/********************** HEADERS ************************/
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
 
+/******************* USER HEADERS **********************/
 #include "../defines.h"
 #include "../socketPrototypes.h"
 #include "../mesg.h"
@@ -32,7 +36,7 @@
 #define NUM_REQUESTS	2
 
 /********************* PROTOTYPES **********************/
-int processClient(int socket, int buflen, int *write, char *ip);
+int processClient(int socket, int buflen, int *write);
 void stats(int *p);
 void printHelp();
 
@@ -150,8 +154,7 @@ int main(int argc, char **argv)
 			return EXIT_FAILURE;
 		}
 		if(pid == 0) { /* child */
-			if(processClient(clientDescriptor, buflen, p, 
-					inet_ntoa(client.sin_addr)) == 0) {
+			if(processClient(clientDescriptor, buflen, p) == 0) {
 				printf("Client Closed: %s\n", 
 						inet_ntoa(client.sin_addr));
 			}
@@ -176,16 +179,17 @@ int main(int argc, char **argv)
  --
  -- PROGRAMMER: Karl Castillo
  --
- -- INTERFACE: void processClient(int socket, int buflen)
+ -- INTERFACE: void processClient(int socket, int buflen, int *write)
  --			socket - client socket descriptor
  --			buflen - the size of the data to read
+ --			wrtie - array of pipes
  --
  -- RETURN: void
  --
  -- NOTES:
  --
  */
-int processClient(int socket, int buflen, int *write, char *ip)
+int processClient(int socket, int buflen, int *write)
 {
 	PPMESG mesg = (PPMESG)malloc(sizeof(PMESG));
 	char *data = (char*)malloc(sizeof(char) * buflen);
@@ -199,13 +203,13 @@ int processClient(int socket, int buflen, int *write, char *ip)
 		sendData(&socket, data, buflen);
 	}
 
-	sprintf(mesg->mesg_data, "%s: %d", ip, numReq);
+	sprintf(mesg->mesg_data, "%d", ip, numReq);
 	mesg->mesg_len = sizeof(mesg->mesg_data)/sizeof(char);
 	mesg->mesg_type = NUM_REQUESTS;
 
 	mesgSend(write[1], mesg);
 
-	sprintf(mesg->mesg_data, "%s: %d", ip, recvData);
+	sprintf(mesg->mesg_data, "%d", ip, recvData);
 	mesg->mesg_len = sizeof(mesg->mesg_data)/sizeof(char);
 	mesg->mesg_type = NUM_DATA_RECV;
 
@@ -217,6 +221,25 @@ int processClient(int socket, int buflen, int *write, char *ip)
 	return readReturn;
 }
 
+/*
+ -- FUNCTION: stats
+ --
+ -- DATE: February 23, 2012
+ --
+ -- REVISIONS: (Date and Description)
+ --
+ -- DESIGNER: Karl Castillo
+ --
+ -- PROGRAMMER: Karl Castillo
+ --
+ -- INTERFACE: void stats(int *p) 
+ --				p - array of read/write pipe
+ --
+ -- RETURN: void
+ --
+ -- NOTES:
+ -- Used by the worker process to save data into files.
+ */
 void stats(int *p)
 {
 	PPMESG mesg = (PPMESG)malloc(sizeof(PMESG));

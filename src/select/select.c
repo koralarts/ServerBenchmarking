@@ -1,9 +1,16 @@
 /*
- -- SOURCE FILE: procthread.c
+ -- SOURCE FILE: select.c
  --
- -- PROGRAM: procthread
+ -- PROGRAM: select
  --
  -- FUNCTIONS:
+ -- 	void stats(int *p);
+ -- 	void printHelp();
+ -- 	void clearSet(int *client, fd_set *allset, int socket);
+ -- 	void addClient(int *socket, int *client, fd_set *allset, int *maxi, int *maxfd,
+ --				struct sockaddr_in *clientSock);
+ -- 	int processClient(int socket, int buflen);
+ -- 	void saveStats(int);
  --
  -- DATE: February 11, 2012
  --
@@ -15,7 +22,7 @@
  -- This program will be used by the server benchmarking program. This will be
  -- a normal echo server that uses select.
  */
-
+/********************** HEADERS ************************/
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -24,6 +31,7 @@
 #include <sys/socket.h>
 #include <signal.h>
 
+/******************* USER HEADERS **********************/
 #include "../defines.h"
 #include "../socketPrototypes.h"
 #include "../mesg.h"
@@ -206,6 +214,31 @@ int main(int argc, char **argv)
 	return EXIT_SUCCESS;
 }
 
+/*
+ -- FUNCTION: addClient
+ --
+ -- DATE: February 10, 2012
+ --
+ -- REVISIONS: (Date and Description)
+ --
+ -- DESIGNER: Karl Castillo
+ --
+ -- PROGRAMMER: Karl Castillo
+ --
+ -- INTERFACE: void addClient(int *socket, int *client, fd_set *allset, int *maxi, int *maxfd,
+ --			struct sockaddr_in *clientSock)
+ --				socket - the main socket descriptor
+ --				client - the client socket descriptor
+ --				allset - set of all the client socket descriptors
+ --				maxi - the current max index in the allset array
+ --				maxfd - the max file descriptor
+ --				clientSock - the sockaddr structure to store the data
+ --
+ -- RETURN: void
+ --
+ -- NOTES:
+ --
+ */
 void addClient(int *socket, int *client, fd_set *allset, int *maxi, int *maxfd,
 			struct sockaddr_in *clientSock)
 {
@@ -317,6 +350,26 @@ void clearSet(int *client, fd_set *allset, int socket)
 	FD_SET(socket, allset);
 }
 
+/*
+ -- FUNCTION: saveStats
+ --
+ -- DATE: February 23, 2012
+ --
+ -- REVISIONS: (Date and Description)
+ --
+ -- DESIGNER: Karl Castillo
+ --
+ -- PROGRAMMER: Karl Castillo
+ --
+ -- INTERFACE: void saveStats(int sig)
+ --			sig - the signal caught
+ --
+ -- RETURN: void
+ --
+ -- NOTES:
+ -- Function associated with the SIGINT capture. Used to save data after the
+ -- CTRL+C.
+ */
 void saveStats(int sig)
 {
 	PPMESG mesg = (PPMESG)malloc(sizeof(PMESG));
@@ -336,6 +389,25 @@ void saveStats(int sig)
 	free(mesg);
 }
 
+/*
+ -- FUNCTION: stats
+ --
+ -- DATE: February 23, 2012
+ --
+ -- REVISIONS: (Date and Description)
+ --
+ -- DESIGNER: Karl Castillo
+ --
+ -- PROGRAMMER: Karl Castillo
+ --
+ -- INTERFACE: void stats(int *p) 
+ --				p - array of read/write pipe
+ --
+ -- RETURN: void
+ --
+ -- NOTES:
+ -- Used by the worker process to save data into files.
+ */
 void stats(int *p)
 {
 	PPMESG mesg = (PPMESG)malloc(sizeof(PMESG));

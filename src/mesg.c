@@ -1,13 +1,76 @@
-#include "mesg.h"
+/*
+ -- SOURCE FILE: mesg.c
+ --
+ -- PROGRAM: 
+ --
+ -- FUNCTIONS:
+ --	ssize_t mesgSend(int p, PPMESG msg);
+ --	ssize_t mesgRecv(int p, PPMESG msg);
+ --
+ -- DATE: February 9, 2012
+ --
+ -- DESIGNER: Richard Stevens
+ --
+ -- PROGRAMMER: Karl Castillo
+ --
+ -- NOTES:
+ -- Based on Richard Steven's FIFO example.
+ */
+/********************** HEADERS ************************/
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
 
+/******************* USER HEADERS **********************/
+#include "mesg.h"
+
+/*
+ -- FUNCTION: mesgSend
+ --
+ -- DATE: February 11, 2012
+ --
+ -- REVISIONS: (Date and Description)
+ --
+ -- DESIGNER: Richard Stevens
+ --
+ -- PROGRAMMER: Karl Castillo
+ --
+ -- INTERFACE: ssize_t mesgSend(int p, PPMESG msg)
+ --			p - the write descriptor
+ --			msg - a pointer to the struct that will hold the data
+ --
+ -- RETURN: ssize_t
+ --		size of data read
+ --
+ -- NOTES:
+ -- Modified to fit the needs of the program
+ */
 ssize_t mesgSend(int p, PPMESG msg)
 {
 	return (write(p, msg, MESG_HEAD_LEN + msg->mesg_len));
 }
 
+/*
+ -- FUNCTION: mesgRecv
+ --
+ -- DATE: February 11, 2012
+ --
+ -- REVISIONS: (Date and Description)
+ --
+ -- DESIGNER: Richard Stevens
+ --
+ -- PROGRAMMER: Karl Castillo
+ --
+ -- INTERFACE: ssize_t mesgRecv(int p, PPMESG msg)
+ --			p - the write descriptor
+ --			msg - a pointer to the struct that will hold the data
+ --
+ -- RETURN: ssize_t
+ --		size of data read
+ --
+ -- NOTES:
+ -- Modified to fit the needs of the program
+ */
 ssize_t mesgRecv(int p, PPMESG msg)
 {
 	ssize_t len;
