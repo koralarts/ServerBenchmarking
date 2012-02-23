@@ -1,4 +1,4 @@
-for(( i = 0; i < 3000; i++ ))
+for(( i = 0; i < $1; i++ ))
 do
-	./release/client -i 127.0.0.1 -l 1000 -t 10 &
+	./release/client -i 192.168.0.3 -l 1000 -t 10 &
 done
