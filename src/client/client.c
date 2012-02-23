@@ -6,7 +6,7 @@
  -- FUNCTIONS:
  --	void stats(int *read);
  --	void printHelp();
- --	long delay (struct timeval t1, struct timeval t2);
+ --	double delay(struct timeval t1, struct timeval t2);
  --
  -- DATE: February 9, 2012
  --
@@ -40,7 +40,7 @@
 /********************* PROTOTYPES **********************/
 void stats(int *read);
 void printHelp();
-long delay (struct timeval t1, struct timeval t2);
+double delay(struct timeval t1, struct timeval t2);
 
 /*
  -- FUNCTION: main
@@ -191,13 +191,14 @@ int main (int argc, char **argv)
 
 		gettimeofday(&end, NULL); /* End Timer */
 
-		sprintf(mesg->mesg_data, "%d", delay(start, end));
+		sprintf(mesg->mesg_data, "%f", delay(start, end));
 		mesg->mesg_len = sizeof(mesg->mesg_data)/sizeof(char);
 		mesg->mesg_type = RTT;
 
 		mesgSend(p[1], mesg);
 
-		puts(reply);
+		sleep(1);
+
 		fflush(stdout);
 	}
 
@@ -263,7 +264,7 @@ void stats(int *p)
 					fprintf(stderr, "fopen(req.txt)");
 					exit(EXIT_FAILURE);
 				}
-				fprintf(req, "%d: %s\n", getpid(), mesg->mesg_data);
+				fprintf(req, "%d, %s\n", getpid(), mesg->mesg_data);
 				fclose(req);
 				break;
 			case NUM_DATA_SENT: /* Save number of data sent */
@@ -271,7 +272,7 @@ void stats(int *p)
 					fprintf(stderr, "fopen(data.txt)");
 					exit(EXIT_FAILURE);
 				}
-				fprintf(data, "%d: %s\n", getpid(), mesg->mesg_data);
+				fprintf(data, "%d, %s\n", getpid(), mesg->mesg_data);
 				fclose(data);
 				break;
 			case RTT: /* save round trip times */
@@ -279,7 +280,7 @@ void stats(int *p)
 					fprintf(stderr, "fopen(rtt.txt)");
 					exit(EXIT_FAILURE);
 				}
-				fprintf(rtt, "%d: %s\n", getpid(), mesg->mesg_data);
+				fprintf(rtt, "%d, %s\n", getpid(), mesg->mesg_data);
 				fclose(rtt);
 				break;
 			default: /* invalid type */
@@ -312,12 +313,14 @@ void stats(int *p)
  * This is used by both the thread and process versions of the program to
  * calculate the delay.
  */
-long delay (struct timeval t1, struct timeval t2)
+double delay (struct timeval t1, struct timeval t2)
 {
-	long d;
+	double d;
+	double ms = 1000;
+	double ms2 = 500;
 
-	d = (t2.tv_sec - t1.tv_sec) * 1000;
-	d += ((t2.tv_usec - t1.tv_usec + 500) / 1000);
+	d = (t2.tv_sec - t1.tv_sec) * ms;
+	d += ((t2.tv_usec - t1.tv_usec + ms2) / ms);
 	return(d);
 }
 

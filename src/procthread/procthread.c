@@ -203,13 +203,13 @@ int processClient(int socket, int buflen, int *write)
 		sendData(&socket, data, buflen);
 	}
 
-	sprintf(mesg->mesg_data, "%d", ip, numReq);
+	sprintf(mesg->mesg_data, "%d", numReq);
 	mesg->mesg_len = sizeof(mesg->mesg_data)/sizeof(char);
 	mesg->mesg_type = NUM_REQUESTS;
 
 	mesgSend(write[1], mesg);
 
-	sprintf(mesg->mesg_data, "%d", ip, recvData);
+	sprintf(mesg->mesg_data, "%d", recvData);
 	mesg->mesg_len = sizeof(mesg->mesg_data)/sizeof(char);
 	mesg->mesg_type = NUM_DATA_RECV;
 

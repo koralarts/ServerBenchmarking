@@ -98,7 +98,5 @@ ssize_t mesgRecv(int p, PPMESG msg)
 		}
 	}
 
-	printf("data: %s\n", msg->mesg_data);
-
 	return len;
 }
